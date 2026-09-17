@@ -8,7 +8,6 @@ from parking_logic import summarize
 
 st.set_page_config(page_title="ParkVision AI", layout="wide")
 
-WIDTH, HEIGHT = 60, 40  # must match the values you used in pick_slots_app.py
 CLASS_ORDER = ["empty", "occupied"]  # matches your trained mapping: {'empty': 0, 'occupied': 1}
 
 @st.cache_resource
@@ -18,13 +17,13 @@ def load_model():
 @st.cache_data
 def load_positions():
     with open("CarParkPos.pkl", "rb") as f:
-        return pickle.load(f)
+        return pickle.load(f)  # now a list of (x, y, w, h)
 
 model = load_model()
 posList = load_positions()
 
 st.title("🅿️ ParkVision AI — Intelligent Urban Parking Analytics")
-st.write("Upload a parking lot image (taken from the same angle as your reference image) to see live slot-level occupancy.")
+st.write("Upload a parking lot image (same camera angle as the reference image) to see live slot-level occupancy.")
 
 uploaded_file = st.file_uploader("Upload parking lot image", type=["jpg", "jpeg", "png"])
 
@@ -35,9 +34,8 @@ if uploaded_file is not None:
 
     occupied_count = 0
 
-    for pos in posList:
-        x, y = pos
-        crop = img_array[y:y + HEIGHT, x:x + WIDTH]
+    for (x, y, w, h) in posList:
+        crop = img_array[y:y + h, x:x + w]
         if crop.size == 0:
             continue
         crop_resized = cv2.resize(crop, (224, 224)) / 255.0
@@ -52,7 +50,7 @@ if uploaded_file is not None:
         else:
             color = (0, 255, 0)  # green
 
-        cv2.rectangle(display_img, (x, y), (x + WIDTH, y + HEIGHT), color, 2)
+        cv2.rectangle(display_img, (x, y), (x + w, y + h), color, 2)
 
     total_slots = len(posList)
     results = summarize(total_slots, occupied_count)
