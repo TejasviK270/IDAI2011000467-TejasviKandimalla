@@ -26,9 +26,11 @@ if uploaded_file is not None:
 
     results = model.predict(
         image,
-        conf=0.25,
-        imgsz=1920,     # higher resolution catches small/dense slots that 640 would miss
-        max_det=2000,   # raised from the default 300 so dense lots aren't capped
+        conf=0.3,
+        iou=0.3,        # lowered from default 0.7 — more aggressively removes duplicate/overlapping boxes
+        imgsz=1920,
+        max_det=2000,
+        agnostic_nms=True,  # suppress overlaps across classes too, not just within the same class
         verbose=False,
     )
     result = results[0]
@@ -45,10 +47,10 @@ if uploaded_file is not None:
 
         if label == "space-occupied":
             occupied_count += 1
-            color = (255, 0, 0)  # red
+            color = (255, 0, 0)
         elif label == "space-empty":
             empty_count += 1
-            color = (0, 255, 0)  # green
+            color = (0, 255, 0)
         else:
             color = (255, 255, 0)
 
