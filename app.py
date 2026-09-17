@@ -18,6 +18,8 @@ model = load_model()
 st.title("🅿️ ParkVision AI — Intelligent Urban Parking Analytics")
 st.write("Upload a parking lot image to detect and count occupied/empty slots.")
 
+conf_threshold = st.slider("Confidence threshold (lower = more detections, more noise)", 0.05, 0.9, 0.15, 0.05)
+
 uploaded_file = st.file_uploader("Upload parking lot image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
@@ -26,7 +28,7 @@ if uploaded_file is not None:
 
     results = model.predict(
         image,
-        conf=0.15,
+        conf=conf_threshold,
         iou=0.3,
         imgsz=1920,
         max_det=2000,
@@ -34,8 +36,12 @@ if uploaded_file is not None:
     )
     result = results[0]
 
+    st.write(f"**Raw detections at conf={conf_threshold}:** {len(result.boxes)}")
+
     occupied_count = 0
     empty_count = 0
+    bottom_half_count = 0
+    img_h = img_array.shape[0]
 
     display_img = img_array.copy()
 
@@ -43,6 +49,10 @@ if uploaded_file is not None:
         cls_id = int(box.cls[0])
         label = CLASS_NAMES[cls_id] if cls_id < len(CLASS_NAMES) else str(cls_id)
         x1, y1, x2, y2 = map(int, box.xyxy[0])
+
+        rel_y = ((y1 + y2) / 2) / img_h
+        if rel_y > 0.5:
+            bottom_half_count += 1
 
         if label == "space-occupied":
             occupied_count += 1
@@ -54,6 +64,8 @@ if uploaded_file is not None:
             color = (255, 255, 0)
 
         cv2.rectangle(display_img, (x1, y1), (x2, y2), color, 2)
+
+    st.write(f"**Detections in bottom half of image:** {bottom_half_count}")
 
     total_slots = occupied_count + empty_count
     results_summary = summarize(total_slots, occupied_count)
