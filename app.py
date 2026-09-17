@@ -9,6 +9,7 @@ from parking_logic import summarize
 st.set_page_config(page_title="ParkVision AI", layout="wide")
 
 CLASS_ORDER = ["empty", "occupied"]  # matches your trained mapping: {'empty': 0, 'occupied': 1}
+SHRINK = 0.55  # draw boxes at 55% of their original size, centered on the same spot
 
 @st.cache_resource
 def load_model():
@@ -17,7 +18,7 @@ def load_model():
 @st.cache_data
 def load_positions():
     with open("CarParkPos.pkl", "rb") as f:
-        return pickle.load(f)  # now a list of (x, y, w, h)
+        return pickle.load(f)  # list of (x, y, w, h)
 
 model = load_model()
 posList = load_positions()
@@ -50,7 +51,13 @@ if uploaded_file is not None:
         else:
             color = (0, 255, 0)  # green
 
-        cv2.rectangle(display_img, (x, y), (x + w, y + h), color, 2)
+        # shrink the drawn box toward its center for a cleaner, less-overlapping overlay
+        cx, cy = x + w / 2, y + h / 2
+        draw_w, draw_h = w * SHRINK, h * SHRINK
+        x1, y1 = int(cx - draw_w / 2), int(cy - draw_h / 2)
+        x2, y2 = int(cx + draw_w / 2), int(cy + draw_h / 2)
+
+        cv2.rectangle(display_img, (x1, y1), (x2, y2), color, 2)
 
     total_slots = len(posList)
     results = summarize(total_slots, occupied_count)
