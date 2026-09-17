@@ -26,11 +26,10 @@ if uploaded_file is not None:
 
     results = model.predict(
         image,
-        conf=0.15,       # lowered from 0.3 — bottom-half slots score lower confidence, this catches more of them
+        conf=0.15,
         iou=0.3,
         imgsz=1920,
         max_det=2000,
-        agnostic_nms=True,
         verbose=False,
     )
     result = results[0]
