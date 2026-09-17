@@ -9,7 +9,6 @@ from parking_logic import summarize
 st.set_page_config(page_title="ParkVision AI", layout="wide")
 
 CLASS_ORDER = ["empty", "occupied"]  # matches your trained mapping: {'empty': 0, 'occupied': 1}
-SHRINK = 0.55  # draw boxes at 55% of their original size, centered on the same spot
 
 @st.cache_resource
 def load_model():
@@ -22,6 +21,10 @@ def load_positions():
 
 model = load_model()
 posList = load_positions()
+
+# compute one uniform box size from the average of all slot dimensions
+avg_w = int(sum(w for (_, _, w, _) in posList) / len(posList))
+avg_h = int(sum(h for (_, _, _, h) in posList) / len(posList))
 
 st.title("🅿️ ParkVision AI — Intelligent Urban Parking Analytics")
 st.write("Upload a parking lot image (same camera angle as the reference image) to see live slot-level occupancy.")
@@ -36,6 +39,7 @@ if uploaded_file is not None:
     occupied_count = 0
 
     for (x, y, w, h) in posList:
+        # still crop using the slot's ORIGINAL box for prediction accuracy
         crop = img_array[y:y + h, x:x + w]
         if crop.size == 0:
             continue
@@ -51,11 +55,10 @@ if uploaded_file is not None:
         else:
             color = (0, 255, 0)  # green
 
-        # shrink the drawn box toward its center for a cleaner, less-overlapping overlay
+        # draw a UNIFORM-SIZE box, centered on the slot's real position
         cx, cy = x + w / 2, y + h / 2
-        draw_w, draw_h = w * SHRINK, h * SHRINK
-        x1, y1 = int(cx - draw_w / 2), int(cy - draw_h / 2)
-        x2, y2 = int(cx + draw_w / 2), int(cy + draw_h / 2)
+        x1, y1 = int(cx - avg_w / 2), int(cy - avg_h / 2)
+        x2, y2 = int(cx + avg_w / 2), int(cy + avg_h / 2)
 
         cv2.rectangle(display_img, (x1, y1), (x2, y2), color, 2)
 
