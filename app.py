@@ -13,7 +13,7 @@ CLASS_ORDER = ["empty", "occupied"]  # matches your trained mapping: {'empty': 0
 
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model("model/parking_model.h5")
+    return tf.keras.models.load_model("model/parking_model.keras")
 
 @st.cache_data
 def load_positions():
