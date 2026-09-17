@@ -26,11 +26,11 @@ if uploaded_file is not None:
 
     results = model.predict(
         image,
-        conf=0.3,
-        iou=0.3,        # lowered from default 0.7 — more aggressively removes duplicate/overlapping boxes
+        conf=0.15,       # lowered from 0.3 — bottom-half slots score lower confidence, this catches more of them
+        iou=0.3,
         imgsz=1920,
         max_det=2000,
-        agnostic_nms=True,  # suppress overlaps across classes too, not just within the same class
+        agnostic_nms=True,
         verbose=False,
     )
     result = results[0]
