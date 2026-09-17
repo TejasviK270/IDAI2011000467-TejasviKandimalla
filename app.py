@@ -1,12 +1,12 @@
 import streamlit as st
 import numpy as np
+import cv2
 from PIL import Image
 from ultralytics import YOLO
 from parking_logic import summarize
 
 st.set_page_config(page_title="ParkVision AI", layout="wide")
 
-# Update this order to match what data.yaml printed in Step 2
 CLASS_NAMES = ["space-empty", "space-occupied"]
 
 @st.cache_resource
@@ -22,23 +22,37 @@ uploaded_file = st.file_uploader("Upload parking lot image", type=["jpg", "jpeg"
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
+    img_array = np.array(image)
 
-    results = model.predict(image, conf=0.25, verbose=False)
+    results = model.predict(
+        image,
+        conf=0.25,
+        imgsz=1920,     # higher resolution catches small/dense slots that 640 would miss
+        max_det=2000,   # raised from the default 300 so dense lots aren't capped
+        verbose=False,
+    )
     result = results[0]
 
     occupied_count = 0
     empty_count = 0
 
+    display_img = img_array.copy()
+
     for box in result.boxes:
         cls_id = int(box.cls[0])
         label = CLASS_NAMES[cls_id] if cls_id < len(CLASS_NAMES) else str(cls_id)
+        x1, y1, x2, y2 = map(int, box.xyxy[0])
+
         if label == "space-occupied":
             occupied_count += 1
+            color = (255, 0, 0)  # red
         elif label == "space-empty":
             empty_count += 1
+            color = (0, 255, 0)  # green
+        else:
+            color = (255, 255, 0)
 
-    annotated = result.plot()
-    annotated = annotated[:, :, ::-1]  # BGR to RGB
+        cv2.rectangle(display_img, (x1, y1), (x2, y2), color, 2)
 
     total_slots = occupied_count + empty_count
     results_summary = summarize(total_slots, occupied_count)
@@ -46,7 +60,7 @@ if uploaded_file is not None:
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        st.image(annotated, caption="Detected parking slots", use_container_width=True)
+        st.image(display_img, caption="Detected parking slots (green = empty, red = occupied)", width="stretch")
 
     with col2:
         st.metric("Total Slots", results_summary["total_slots"])
