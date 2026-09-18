@@ -22,19 +22,22 @@ st.write("Upload a photo of a parking lot to instantly see which spaces are occu
 with st.sidebar:
     st.header("⚙️ Advanced Settings")
     conf_threshold = st.slider(
-        "Detection sensitivity", min_value=0.1, max_value=0.9, value=0.35, step=0.05,
-        help="Lower values detect more slots but may include false positives."
+        "Detection sensitivity", min_value=0.1, max_value=0.9, value=0.35, step=0.05
     )
     iou_threshold = st.slider(
-        "Overlap suppression (IoU)", min_value=0.1, max_value=0.9, value=0.5, step=0.05,
-        help="Lower values remove more duplicate/overlapping boxes."
+        "Overlap suppression (IoU)", min_value=0.1, max_value=0.9, value=0.5, step=0.05
     )
     st.caption("Default settings work well for most images — only adjust if results look wrong.")
 
 uploaded_file = st.file_uploader("📤 Upload a parking lot image", type=["jpg", "jpeg", "png"])
 
+# store the uploaded image bytes in session_state so slider changes
+# always re-run detection on the SAME image without needing a re-upload
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
+    st.session_state["uploaded_image_bytes"] = uploaded_file.getvalue()
+
+if "uploaded_image_bytes" in st.session_state:
+    image = Image.open(io_BytesIO := __import__("io").BytesIO(st.session_state["uploaded_image_bytes"])).convert("RGB")
     img_array = np.array(image)
 
     with st.spinner("Analyzing parking lot..."):
@@ -94,6 +97,10 @@ if uploaded_file is not None:
             st.error(f"🔴 Congestion Level: **{congestion}**")
 
         st.info(f"💡 {results_summary['recommendation']}")
+
+    if st.button("🗑️ Clear image"):
+        del st.session_state["uploaded_image_bytes"]
+        st.rerun()
 else:
     st.info("👆 Upload an image above to get started.")
     st.caption("Works best with aerial or elevated views of parking lots, similar to the PKLot dataset used for training.")
